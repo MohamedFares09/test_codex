@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -26,11 +27,15 @@ class MessageFirestoreService {
         .collection('conversations')
         .doc(conversationId)
         .snapshots()
-        .map(
-          (doc) => ConversationModel.fromFirestore(
+        .asyncMap(
+          (doc) async => ConversationModel.fromFirestore(
             id: doc.id,
             currentUserId: currentUserId,
-            json: doc.data() ?? {},
+            json: await _conversationDataWithLatestProfile(
+              conversationId: doc.id,
+              currentUserId: currentUserId,
+              data: doc.data() ?? {},
+            ),
           ),
         );
   }
@@ -333,6 +338,79 @@ class MessageFirestoreService {
 
     return onlineUsers.contains(userId) &&
         DateTime.now().difference(updatedAt.toDate()) <= onlinePresenceTimeout;
+  }
+
+  Future<Map<String, dynamic>> _conversationDataWithLatestProfile({
+    required String conversationId,
+    required String currentUserId,
+    required Map<String, dynamic> data,
+  }) async {
+    final conversationData = Map<String, dynamic>.from(data);
+    final participantIds = List<String>.from(
+      conversationData['participantIds'] ?? [],
+    );
+    final otherUserId = participantIds.firstWhere(
+      (uId) => uId != currentUserId,
+      orElse: () => '',
+    );
+    if (otherUserId.isEmpty) {
+      return conversationData;
+    }
+
+    final userDoc = await firestore.collection('users').doc(otherUserId).get();
+    final userData = userDoc.data();
+    if (userData == null) {
+      return conversationData;
+    }
+
+    final participantNames = Map<String, dynamic>.from(
+      conversationData['participantNames'] ?? {},
+    );
+    final participantEmails = Map<String, dynamic>.from(
+      conversationData['participantEmails'] ?? {},
+    );
+    final participantPhotoUrls = Map<String, dynamic>.from(
+      conversationData['participantPhotoUrls'] ?? {},
+    );
+    final latestName = userData['name'];
+    final latestEmail = userData['email'];
+    final latestPhotoUrl = userData['photoUrl'];
+    var hasChanges = false;
+
+    if (latestName is String &&
+        latestName.trim().isNotEmpty &&
+        participantNames[otherUserId] != latestName) {
+      participantNames[otherUserId] = latestName;
+      hasChanges = true;
+    }
+    if (latestEmail is String &&
+        latestEmail.trim().isNotEmpty &&
+        participantEmails[otherUserId] != latestEmail) {
+      participantEmails[otherUserId] = latestEmail;
+      hasChanges = true;
+    }
+    if (latestPhotoUrl is String &&
+        latestPhotoUrl.trim().isNotEmpty &&
+        participantPhotoUrls[otherUserId] != latestPhotoUrl) {
+      participantPhotoUrls[otherUserId] = latestPhotoUrl;
+      hasChanges = true;
+    }
+
+    conversationData['participantNames'] = participantNames;
+    conversationData['participantEmails'] = participantEmails;
+    conversationData['participantPhotoUrls'] = participantPhotoUrls;
+
+    if (hasChanges) {
+      unawaited(
+        firestore.collection('conversations').doc(conversationId).set({
+          'participantNames': participantNames,
+          'participantEmails': participantEmails,
+          'participantPhotoUrls': participantPhotoUrls,
+        }, SetOptions(merge: true)),
+      );
+    }
+
+    return conversationData;
   }
 
   String _fileExtension(String filePath, String type) {

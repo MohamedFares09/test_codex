@@ -28,18 +28,18 @@ class HomeFirestoreService {
         .collection('conversations')
         .where('participantIds', arrayContains: currentUserId)
         .snapshots()
-        .map((snapshot) {
+        .asyncMap((snapshot) async {
       unawaited(_markIncomingMessagesAsDelivered(snapshot.docs));
+      final conversations = await Future.wait(
+        snapshot.docs.map(
+          (doc) => _conversationFromDoc(
+            doc: doc,
+            currentUserId: currentUserId,
+          ),
+        ),
+      );
       return _sortConversations(
-        snapshot.docs
-            .map(
-              (doc) => ConversationModel.fromFirestore(
-                id: doc.id,
-                currentUserId: currentUserId,
-                json: doc.data(),
-              ),
-            )
-            .toList(),
+        conversations,
       );
     });
   }
@@ -52,17 +52,102 @@ class HomeFirestoreService {
         .get();
 
     unawaited(_markIncomingMessagesAsDelivered(snapshot.docs));
-    return _sortConversations(
-      snapshot.docs
-          .map(
-            (doc) => ConversationModel.fromFirestore(
-              id: doc.id,
-              currentUserId: currentUserId,
-              json: doc.data(),
-            ),
-          )
-          .toList(),
+    final conversations = await Future.wait(
+      snapshot.docs.map(
+        (doc) => _conversationFromDoc(
+          doc: doc,
+          currentUserId: currentUserId,
+        ),
+      ),
     );
+    return _sortConversations(
+      conversations,
+    );
+  }
+
+  Future<ConversationModel> _conversationFromDoc({
+    required QueryDocumentSnapshot<Map<String, dynamic>> doc,
+    required String currentUserId,
+  }) async {
+    final data = Map<String, dynamic>.from(doc.data());
+    final participantIds = List<String>.from(data['participantIds'] ?? []);
+    final otherUserId = participantIds.firstWhere(
+      (uId) => uId != currentUserId,
+      orElse: () => '',
+    );
+
+    if (otherUserId.isNotEmpty) {
+      await _mergeLatestUserProfile(
+        conversationRef: doc.reference,
+        conversationData: data,
+        userId: otherUserId,
+      );
+    }
+
+    return ConversationModel.fromFirestore(
+      id: doc.id,
+      currentUserId: currentUserId,
+      json: data,
+    );
+  }
+
+  Future<void> _mergeLatestUserProfile({
+    required DocumentReference<Map<String, dynamic>> conversationRef,
+    required Map<String, dynamic> conversationData,
+    required String userId,
+  }) async {
+    final userDoc = await firestore.collection('users').doc(userId).get();
+    final userData = userDoc.data();
+    if (userData == null) {
+      return;
+    }
+
+    final participantNames = Map<String, dynamic>.from(
+      conversationData['participantNames'] ?? {},
+    );
+    final participantEmails = Map<String, dynamic>.from(
+      conversationData['participantEmails'] ?? {},
+    );
+    final participantPhotoUrls = Map<String, dynamic>.from(
+      conversationData['participantPhotoUrls'] ?? {},
+    );
+    final latestName = userData['name'];
+    final latestEmail = userData['email'];
+    final latestPhotoUrl = userData['photoUrl'];
+    var hasChanges = false;
+
+    if (latestName is String &&
+        latestName.trim().isNotEmpty &&
+        participantNames[userId] != latestName) {
+      participantNames[userId] = latestName;
+      hasChanges = true;
+    }
+    if (latestEmail is String &&
+        latestEmail.trim().isNotEmpty &&
+        participantEmails[userId] != latestEmail) {
+      participantEmails[userId] = latestEmail;
+      hasChanges = true;
+    }
+    if (latestPhotoUrl is String &&
+        latestPhotoUrl.trim().isNotEmpty &&
+        participantPhotoUrls[userId] != latestPhotoUrl) {
+      participantPhotoUrls[userId] = latestPhotoUrl;
+      hasChanges = true;
+    }
+
+    conversationData['participantNames'] = participantNames;
+    conversationData['participantEmails'] = participantEmails;
+    conversationData['participantPhotoUrls'] = participantPhotoUrls;
+
+    if (hasChanges) {
+      unawaited(
+        conversationRef.set({
+          'participantNames': participantNames,
+          'participantEmails': participantEmails,
+          'participantPhotoUrls': participantPhotoUrls,
+        }, SetOptions(merge: true)),
+      );
+    }
   }
 
   Future<void> _markIncomingMessagesAsDelivered(
