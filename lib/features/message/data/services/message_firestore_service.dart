@@ -14,6 +14,8 @@ class MessageFirestoreService {
     required this.firebaseStorage,
   });
 
+  static const Duration onlinePresenceTimeout = Duration(minutes: 2);
+
   final FirebaseFirestore firestore;
   final FirebaseAuth firebaseAuth;
   final FirebaseStorage firebaseStorage;
@@ -76,7 +78,14 @@ class MessageFirestoreService {
       final onlineUsers = List<String>.from(
         conversationData['onlineUsers'] ?? [],
       );
-      final receiverIsOnline = onlineUsers.contains(receiverId);
+      final onlineUserUpdatedAt = Map<String, dynamic>.from(
+        conversationData['onlineUserUpdatedAt'] ?? {},
+      );
+      final receiverIsOnline = _isUserOnline(
+        userId: receiverId,
+        onlineUsers: onlineUsers,
+        onlineUserUpdatedAt: onlineUserUpdatedAt,
+      );
       final messageStatus = receiverIsOnline ? 'read' : 'sent';
 
       transaction.set(messageRef, {
@@ -137,7 +146,14 @@ class MessageFirestoreService {
       final onlineUsers = List<String>.from(
         conversationData['onlineUsers'] ?? [],
       );
-      final receiverIsOnline = onlineUsers.contains(receiverId);
+      final onlineUserUpdatedAt = Map<String, dynamic>.from(
+        conversationData['onlineUserUpdatedAt'] ?? {},
+      );
+      final receiverIsOnline = _isUserOnline(
+        userId: receiverId,
+        onlineUsers: onlineUsers,
+        onlineUserUpdatedAt: onlineUserUpdatedAt,
+      );
       final messageStatus = receiverIsOnline ? 'read' : 'sent';
 
       transaction.set(messageRef, {
@@ -254,10 +270,15 @@ class MessageFirestoreService {
     required bool isOnline,
   }) async {
     final currentUserId = _currentUserId;
+    final presenceUpdatedAtPath = 'onlineUserUpdatedAt.$currentUserId';
+
     await firestore.collection('conversations').doc(conversationId).update({
       'onlineUsers': isOnline
           ? FieldValue.arrayUnion([currentUserId])
           : FieldValue.arrayRemove([currentUserId]),
+      presenceUpdatedAtPath: isOnline
+          ? FieldValue.serverTimestamp()
+          : FieldValue.delete(),
       'unreadCounts.$currentUserId': 0,
     });
     if (isOnline) {
@@ -298,6 +319,20 @@ class MessageFirestoreService {
       throw CustomException('Please sign in again.');
     }
     return user.uid;
+  }
+
+  bool _isUserOnline({
+    required String userId,
+    required List<String> onlineUsers,
+    required Map<String, dynamic> onlineUserUpdatedAt,
+  }) {
+    final updatedAt = onlineUserUpdatedAt[userId];
+    if (updatedAt is! Timestamp) {
+      return false;
+    }
+
+    return onlineUsers.contains(userId) &&
+        DateTime.now().difference(updatedAt.toDate()) <= onlinePresenceTimeout;
   }
 
   String _fileExtension(String filePath, String type) {

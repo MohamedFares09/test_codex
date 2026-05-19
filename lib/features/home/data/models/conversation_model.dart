@@ -3,6 +3,8 @@ import 'package:test_codex/features/home/data/models/home_user_model.dart';
 import 'package:test_codex/features/home/domain/entities/conversation_entity.dart';
 
 class ConversationModel extends ConversationEntity {
+  static const Duration onlinePresenceTimeout = Duration(minutes: 2);
+
   const ConversationModel({
     required super.id,
     required super.otherUser,
@@ -32,6 +34,12 @@ class ConversationModel extends ConversationEntity {
       json['participantPhotoUrls'] ?? {},
     );
     final unreadCounts = Map<String, dynamic>.from(json['unreadCounts'] ?? {});
+    final onlineUsers = json['onlineUsers'] is List
+        ? List<String>.from(json['onlineUsers'])
+        : <String>[];
+    final onlineUserUpdatedAt = Map<String, dynamic>.from(
+      json['onlineUserUpdatedAt'] ?? {},
+    );
 
     return ConversationModel(
       id: id,
@@ -44,8 +52,16 @@ class ConversationModel extends ConversationEntity {
       lastMessage: json['lastMessage'] ?? '',
       updatedAt: (json['updatedAt'] as Timestamp?)?.toDate(),
       unreadCount: unreadCounts[currentUserId] ?? 0,
-      isOnline: json['onlineUsers'] is List &&
-          List<String>.from(json['onlineUsers']).contains(otherUserId),
+      isOnline: onlineUsers.contains(otherUserId) &&
+          _hasFreshPresence(onlineUserUpdatedAt[otherUserId]),
     );
+  }
+
+  static bool _hasFreshPresence(dynamic value) {
+    if (value is! Timestamp) {
+      return false;
+    }
+
+    return DateTime.now().difference(value.toDate()) <= onlinePresenceTimeout;
   }
 }

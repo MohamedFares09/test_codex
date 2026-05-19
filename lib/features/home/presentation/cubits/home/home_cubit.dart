@@ -13,15 +13,19 @@ class HomeCubit extends Cubit<HomeState> {
   HomeCubit(this.homeRepo) : super(HomeInitialState());
 
   final HomeRepo homeRepo;
+  static const Duration _presenceRefreshInterval = Duration(seconds: 30);
 
   StreamSubscription<List<ConversationEntity>>? _conversationsSubscription;
   StreamSubscription<List<HomeStoryEntity>>? _storiesSubscription;
+  Timer? _presenceRefreshTimer;
   List<ConversationEntity> conversations = [];
   List<HomeStoryEntity> stories = [];
   List<HomeUserEntity> searchResults = [];
+  bool _isRefreshingPresence = false;
 
   void watchHome() {
     emit(HomeLoadingState());
+    _startPresenceRefreshTimer();
     _conversationsSubscription?.cancel();
     _conversationsSubscription = homeRepo.watchConversations().listen(
       (items) {
@@ -33,6 +37,31 @@ class HomeCubit extends Cubit<HomeState> {
         emit(HomeErrorState('Something went wrong. Please try again.'));
       },
     );
+  }
+
+  Future<void> _refreshConversationsPresence() async {
+    if (_isRefreshingPresence) {
+      return;
+    }
+
+    _isRefreshingPresence = true;
+    final result = await homeRepo.getConversations();
+    result.fold(
+      (_) {},
+      (items) {
+        conversations = items;
+        _watchStoriesForCurrentConversations();
+        _emitSuccess();
+      },
+    );
+    _isRefreshingPresence = false;
+  }
+
+  void _startPresenceRefreshTimer() {
+    _presenceRefreshTimer?.cancel();
+    _presenceRefreshTimer = Timer.periodic(_presenceRefreshInterval, (_) {
+      unawaited(_refreshConversationsPresence());
+    });
   }
 
   Future<void> getConversations() async {
@@ -142,6 +171,7 @@ class HomeCubit extends Cubit<HomeState> {
 
   @override
   Future<void> close() {
+    _presenceRefreshTimer?.cancel();
     _conversationsSubscription?.cancel();
     _storiesSubscription?.cancel();
     return super.close();
