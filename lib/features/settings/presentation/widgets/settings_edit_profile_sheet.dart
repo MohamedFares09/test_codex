@@ -26,6 +26,7 @@ class _SettingsEditProfileSheetState extends State<SettingsEditProfileSheet> {
   final GlobalKey<FormState> formKey = GlobalKey<FormState>();
   late final TextEditingController nameController;
   String? selectedImagePath;
+  bool deletePhoto = false;
 
   @override
   void initState() {
@@ -53,7 +54,7 @@ class _SettingsEditProfileSheetState extends State<SettingsEditProfileSheet> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                 Text(
+                Text(
                   'Edit Profile',
                   textAlign: TextAlign.center,
                   style: TextStyle(
@@ -72,7 +73,9 @@ class _SettingsEditProfileSheetState extends State<SettingsEditProfileSheet> {
                               name: nameController.text.trim().isEmpty
                                   ? 'User'
                                   : nameController.text,
-                              photoUrl: widget.user?.photoUrl,
+                              photoUrl: deletePhoto
+                                  ? null
+                                  : widget.user?.photoUrl,
                               size: 104,
                             )
                           : CircleAvatar(
@@ -89,9 +92,22 @@ class _SettingsEditProfileSheetState extends State<SettingsEditProfileSheet> {
                             backgroundColor: AppColors.primary,
                             foregroundColor: Colors.white,
                           ),
-                          icon: Icon(Icons.photo_camera_outlined),
+                          icon: const Icon(Icons.photo_camera_outlined),
                         ),
                       ),
+                      if (_canDeletePhoto)
+                        Positioned(
+                          left: -2,
+                          bottom: -2,
+                          child: IconButton.filled(
+                            onPressed: removePhoto,
+                            style: IconButton.styleFrom(
+                              backgroundColor: AppColors.input,
+                              foregroundColor: Colors.redAccent,
+                            ),
+                            icon: const Icon(Icons.delete_outline),
+                          ),
+                        ),
                     ],
                   ),
                 ),
@@ -140,7 +156,17 @@ class _SettingsEditProfileSheetState extends State<SettingsEditProfileSheet> {
     if (image == null) {
       return;
     }
-    setState(() => selectedImagePath = image.path);
+    setState(() {
+      selectedImagePath = image.path;
+      deletePhoto = false;
+    });
+  }
+
+  void removePhoto() {
+    setState(() {
+      selectedImagePath = null;
+      deletePhoto = true;
+    });
   }
 
   void submit() {
@@ -152,7 +178,17 @@ class _SettingsEditProfileSheetState extends State<SettingsEditProfileSheet> {
       SettingsProfileUpdateData(
         name: nameController.text,
         imagePath: selectedImagePath,
+        deletePhoto: deletePhoto,
       ),
     );
+  }
+
+  bool get _canDeletePhoto {
+    if (selectedImagePath != null) {
+      return true;
+    }
+
+    final photoUrl = widget.user?.photoUrl?.trim();
+    return !deletePhoto && photoUrl != null && photoUrl.isNotEmpty;
   }
 }

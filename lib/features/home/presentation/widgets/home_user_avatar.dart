@@ -44,6 +44,7 @@ class HomeUserAvatar extends StatelessWidget {
             child: hasImage
                 ? Image.network(
                     imageUrl!,
+                    key: ValueKey(imageUrl),
                     width: size,
                     height: size,
                     fit: BoxFit.cover,

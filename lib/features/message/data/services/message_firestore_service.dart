@@ -357,7 +357,7 @@ class MessageFirestoreService {
       return conversationData;
     }
 
-    final userDoc = await firestore.collection('users').doc(otherUserId).get();
+    final userDoc = await _getLatestUserDoc(otherUserId);
     final userData = userDoc.data();
     if (userData == null) {
       return conversationData;
@@ -389,11 +389,16 @@ class MessageFirestoreService {
       participantEmails[otherUserId] = latestEmail;
       hasChanges = true;
     }
-    if (latestPhotoUrl is String &&
-        latestPhotoUrl.trim().isNotEmpty &&
-        participantPhotoUrls[otherUserId] != latestPhotoUrl) {
-      participantPhotoUrls[otherUserId] = latestPhotoUrl;
-      hasChanges = true;
+    if (userData.containsKey('photoUrl')) {
+      if (latestPhotoUrl is String && latestPhotoUrl.trim().isNotEmpty) {
+        if (participantPhotoUrls[otherUserId] != latestPhotoUrl) {
+          participantPhotoUrls[otherUserId] = latestPhotoUrl;
+          hasChanges = true;
+        }
+      } else if (participantPhotoUrls[otherUserId] != null) {
+        participantPhotoUrls[otherUserId] = null;
+        hasChanges = true;
+      }
     }
 
     conversationData['participantNames'] = participantNames;
@@ -411,6 +416,17 @@ class MessageFirestoreService {
     }
 
     return conversationData;
+  }
+
+  Future<DocumentSnapshot<Map<String, dynamic>>> _getLatestUserDoc(
+    String userId,
+  ) async {
+    final userRef = firestore.collection('users').doc(userId);
+    try {
+      return await userRef.get(const GetOptions(source: Source.server));
+    } catch (_) {
+      return userRef.get();
+    }
   }
 
   String _fileExtension(String filePath, String type) {

@@ -29,11 +29,13 @@ class SettingsRepoImpl extends SettingsRepo {
   Future<Either<Failure, SettingsUserEntity>> updateProfile({
     required String name,
     String? imagePath,
+    bool deletePhoto = false,
   }) async {
     try {
       final user = await settingsFirebaseService.updateProfile(
         name: name,
         imagePath: imagePath,
+        deletePhoto: deletePhoto,
       );
       return right(user);
     } on CustomException catch (e) {

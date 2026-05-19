@@ -8,6 +8,7 @@ abstract class SettingsRepo {
   Future<Either<Failure, SettingsUserEntity>> updateProfile({
     required String name,
     String? imagePath,
+    bool deletePhoto = false,
   });
 
   Future<Either<Failure, Unit>> logout();

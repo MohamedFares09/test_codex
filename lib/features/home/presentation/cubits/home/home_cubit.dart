@@ -22,8 +22,18 @@ class HomeCubit extends Cubit<HomeState> {
   List<HomeStoryEntity> stories = [];
   List<HomeUserEntity> searchResults = [];
   bool _isRefreshingPresence = false;
+  bool _hasStartedWatching = false;
+
+  void watchHomeIfNeeded() {
+    if (_hasStartedWatching) {
+      return;
+    }
+
+    watchHome();
+  }
 
   void watchHome() {
+    _hasStartedWatching = true;
     emit(HomeLoadingState());
     _startPresenceRefreshTimer();
     _conversationsSubscription?.cancel();
@@ -142,6 +152,21 @@ class HomeCubit extends Cubit<HomeState> {
   void clearSearch() {
     searchResults = [];
     _emitSuccess();
+  }
+
+  void clearCache() {
+    _presenceRefreshTimer?.cancel();
+    _conversationsSubscription?.cancel();
+    _storiesSubscription?.cancel();
+    _presenceRefreshTimer = null;
+    _conversationsSubscription = null;
+    _storiesSubscription = null;
+    _hasStartedWatching = false;
+    _isRefreshingPresence = false;
+    conversations = [];
+    stories = [];
+    searchResults = [];
+    emit(HomeInitialState());
   }
 
   void _watchStoriesForCurrentConversations() {

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
@@ -12,12 +14,14 @@ import 'package:test_codex/features/groups/domain/repos/groups_repo.dart';
 import 'package:test_codex/features/home/data/repos/home_repo_impl.dart';
 import 'package:test_codex/features/home/data/services/home_firestore_service.dart';
 import 'package:test_codex/features/home/domain/repos/home_repo.dart';
+import 'package:test_codex/features/home/presentation/cubits/home/home_cubit.dart';
 import 'package:test_codex/features/message/data/repos/message_repo_impl.dart';
 import 'package:test_codex/features/message/data/services/message_firestore_service.dart';
 import 'package:test_codex/features/message/domain/repos/message_repo.dart';
 import 'package:test_codex/features/settings/data/repos/settings_repo_impl.dart';
 import 'package:test_codex/features/settings/data/services/settings_firebase_service.dart';
 import 'package:test_codex/features/settings/domain/repos/settings_repo.dart';
+import 'package:test_codex/features/settings/presentation/cubits/settings/settings_cubit.dart';
 
 final GetIt getIt = GetIt.instance;
 
@@ -48,6 +52,7 @@ void setupGetIt() {
       () => FirebaseAuthService(
         firebaseAuth: getIt<FirebaseAuth>(),
         firestore: getIt<FirebaseFirestore>(),
+        firebaseStorage: getIt<FirebaseStorage>(),
       ),
     );
   }
@@ -68,6 +73,11 @@ void setupGetIt() {
   if (!getIt.isRegistered<HomeRepo>()) {
     getIt.registerLazySingleton<HomeRepo>(
       () => HomeRepoImpl(homeFirestoreService: getIt<HomeFirestoreService>()),
+    );
+  }
+  if (!getIt.isRegistered<HomeCubit>()) {
+    getIt.registerLazySingleton<HomeCubit>(
+      () => HomeCubit(getIt<HomeRepo>()),
     );
   }
   if (!getIt.isRegistered<GroupsFirebaseService>()) {
@@ -117,4 +127,19 @@ void setupGetIt() {
       ),
     );
   }
+  if (!getIt.isRegistered<SettingsCubit>()) {
+    getIt.registerLazySingleton<SettingsCubit>(
+      () => SettingsCubit(getIt<SettingsRepo>()),
+    );
+  }
+}
+
+void preloadAppData() {
+  getIt<HomeCubit>().watchHomeIfNeeded();
+  unawaited(getIt<SettingsCubit>().getCurrentUserIfNeeded());
+}
+
+void clearAppDataCache() {
+  getIt<HomeCubit>().clearCache();
+  getIt<SettingsCubit>().clearCache();
 }

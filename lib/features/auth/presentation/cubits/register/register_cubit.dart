@@ -15,12 +15,14 @@ class RegisterCubit extends Cubit<RegisterState> {
     required String name,
     required String email,
     required String password,
+    String? imagePath,
   }) async {
     emit(RegisterLoadingState());
     final result = await authRepo.createUserWithEmailAndPassword(
       name: name,
       email: email,
       password: password,
+      imagePath: imagePath,
     );
     result.fold(
       (failure) => emit(RegisterErrorState(failure.message)),

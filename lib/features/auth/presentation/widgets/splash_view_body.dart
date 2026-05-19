@@ -1,5 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:test_codex/core/services/get_it_service.dart';
 import 'package:test_codex/core/utils/app_colors.dart';
 import 'package:test_codex/core/utils/app_images.dart';
 import 'package:test_codex/core/widgets/custom_asset_image.dart';
@@ -19,9 +20,11 @@ class _SplashViewBodyState extends State<SplashViewBody> {
     super.initState();
     Future.delayed(const Duration(seconds: 2), () {
       if (!mounted) return;
-      final route = FirebaseAuth.instance.currentUser == null
-          ? LoginView.route
-          : HomeView.route;
+      final isSignedIn = FirebaseAuth.instance.currentUser != null;
+      if (isSignedIn) {
+        preloadAppData();
+      }
+      final route = isSignedIn ? HomeView.route : LoginView.route;
       Navigator.pushReplacementNamed(context, route);
     });
   }

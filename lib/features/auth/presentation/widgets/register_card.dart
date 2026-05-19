@@ -16,7 +16,10 @@ class RegisterCard extends StatelessWidget {
     required this.onEmailSaved,
     required this.onPasswordSaved,
     required this.onConfirmSaved,
+    required this.onImageTap,
     required this.onSubmit,
+    this.imagePath,
+    this.onImageRemove,
     super.key,
   });
 
@@ -28,6 +31,9 @@ class RegisterCard extends StatelessWidget {
   final FormFieldSetter<String> onEmailSaved;
   final FormFieldSetter<String> onPasswordSaved;
   final FormFieldSetter<String> onConfirmSaved;
+  final String? imagePath;
+  final VoidCallback onImageTap;
+  final VoidCallback? onImageRemove;
   final VoidCallback onSubmit;
 
   @override
@@ -51,7 +57,11 @@ class RegisterCard extends StatelessWidget {
         autovalidateMode: autovalidateMode,
         child: Column(
           children: [
-            const RegisterAvatarUpload(),
+            RegisterAvatarUpload(
+              imagePath: imagePath,
+              onTap: onImageTap,
+              onRemove: onImageRemove,
+            ),
             const SizedBox(height: 32),
             RegisterLabeledField(
               label: 'FULL NAME',

@@ -34,7 +34,9 @@ class SettingsUserModel extends SettingsUserEntity {
       email: (json['email'] as String?)?.trim().isNotEmpty == true
           ? (json['email'] as String).trim()
           : fallback.email,
-      photoUrl: json['photoUrl'] ?? fallback.photoUrl,
+      photoUrl: json.containsKey('photoUrl')
+          ? json['photoUrl']
+          : fallback.photoUrl,
     );
   }
 

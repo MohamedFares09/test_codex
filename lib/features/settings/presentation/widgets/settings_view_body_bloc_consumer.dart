@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:test_codex/core/services/get_it_service.dart';
 import 'package:test_codex/core/widgets/build_snack_bar.dart';
 import 'package:test_codex/core/widgets/custom_progress_hud.dart';
 import 'package:test_codex/features/auth/presentation/views/login_view.dart';
@@ -26,6 +27,7 @@ class SettingsViewBodyBlocConsumer extends StatelessWidget {
             color: Colors.green,
           );
         } else if (state is SettingsLogoutSuccessState) {
+          clearAppDataCache();
           Navigator.pushNamedAndRemoveUntil(
             context,
             LoginView.route,

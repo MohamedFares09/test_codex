@@ -42,6 +42,7 @@ class SettingsFirebaseService {
   Future<SettingsUserModel> updateProfile({
     required String name,
     String? imagePath,
+    bool deletePhoto = false,
   }) async {
     final user = firebaseAuth.currentUser;
     if (user == null) {
@@ -59,14 +60,16 @@ class SettingsFirebaseService {
         (savedPhotoUrl is String && savedPhotoUrl.trim().isNotEmpty
             ? savedPhotoUrl
             : null);
-    final photoUrl = await _uploadProfileImage(
-      uid: user.uid,
-      imagePath: imagePath,
-      fallbackPhotoUrl: currentPhotoUrl,
-    );
+    final photoUrl = deletePhoto
+        ? null
+        : await _uploadProfileImage(
+            uid: user.uid,
+            imagePath: imagePath,
+            fallbackPhotoUrl: currentPhotoUrl,
+          );
 
     await user.updateDisplayName(cleanName);
-    if (photoUrl != null) {
+    if (deletePhoto || photoUrl != null) {
       await user.updatePhotoURL(photoUrl);
     }
     await user.reload();
@@ -83,6 +86,9 @@ class SettingsFirebaseService {
           userModel.toMap(),
           SetOptions(merge: true),
         );
+    if (deletePhoto && currentPhotoUrl != null) {
+      await _deleteProfileImage(currentPhotoUrl);
+    }
     await _syncProfileToConversations(
       uid: user.uid,
       name: cleanName,
@@ -116,6 +122,12 @@ class SettingsFirebaseService {
     return ref.getDownloadURL();
   }
 
+  Future<void> _deleteProfileImage(String photoUrl) async {
+    try {
+      await firebaseStorage.refFromURL(photoUrl).delete();
+    } catch (_) {}
+  }
+
   Future<void> _syncProfileToConversations({
     required String uid,
     required String name,
@@ -134,8 +146,9 @@ class SettingsFirebaseService {
       batch.set(
         doc.reference,
         {
-          'participantNames.$uid': name,
-          'participantPhotoUrls.$uid': photoUrl,
+          'participantNames': {uid: name},
+          'participantPhotoUrls': {uid: photoUrl},
+          'participantProfileUpdatedAt': {uid: FieldValue.serverTimestamp()},
         },
         SetOptions(merge: true),
       );

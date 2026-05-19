@@ -150,6 +150,7 @@ class SettingsViewBody extends StatelessWidget {
     await context.read<SettingsCubit>().updateProfile(
       name: result.name,
       imagePath: result.imagePath,
+      deletePhoto: result.deletePhoto,
     );
   }
 }

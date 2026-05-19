@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:test_codex/core/services/get_it_service.dart';
 import 'package:test_codex/features/auth/presentation/cubits/login/login_cubit.dart';
 import 'package:test_codex/core/widgets/custom_progress_hud.dart';
 import 'package:test_codex/core/widgets/build_snack_bar.dart';
@@ -20,6 +21,8 @@ class LoginViewBodyBlocConsumer extends StatelessWidget {
             color: Colors.redAccent,
           );
         } else if (state is LoginSuccessState) {
+          clearAppDataCache();
+          preloadAppData();
           buildSnackBar(
             context,
             message: 'Signed in successfully.',

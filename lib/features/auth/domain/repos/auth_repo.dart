@@ -12,5 +12,6 @@ abstract class AuthRepo {
     required String name,
     required String email,
     required String password,
+    String? imagePath,
   });
 }

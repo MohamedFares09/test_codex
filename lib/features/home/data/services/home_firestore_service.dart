@@ -96,7 +96,7 @@ class HomeFirestoreService {
     required Map<String, dynamic> conversationData,
     required String userId,
   }) async {
-    final userDoc = await firestore.collection('users').doc(userId).get();
+    final userDoc = await _getLatestUserDoc(userId);
     final userData = userDoc.data();
     if (userData == null) {
       return;
@@ -128,11 +128,16 @@ class HomeFirestoreService {
       participantEmails[userId] = latestEmail;
       hasChanges = true;
     }
-    if (latestPhotoUrl is String &&
-        latestPhotoUrl.trim().isNotEmpty &&
-        participantPhotoUrls[userId] != latestPhotoUrl) {
-      participantPhotoUrls[userId] = latestPhotoUrl;
-      hasChanges = true;
+    if (userData.containsKey('photoUrl')) {
+      if (latestPhotoUrl is String && latestPhotoUrl.trim().isNotEmpty) {
+        if (participantPhotoUrls[userId] != latestPhotoUrl) {
+          participantPhotoUrls[userId] = latestPhotoUrl;
+          hasChanges = true;
+        }
+      } else if (participantPhotoUrls[userId] != null) {
+        participantPhotoUrls[userId] = null;
+        hasChanges = true;
+      }
     }
 
     conversationData['participantNames'] = participantNames;
@@ -147,6 +152,17 @@ class HomeFirestoreService {
           'participantPhotoUrls': participantPhotoUrls,
         }, SetOptions(merge: true)),
       );
+    }
+  }
+
+  Future<DocumentSnapshot<Map<String, dynamic>>> _getLatestUserDoc(
+    String userId,
+  ) async {
+    final userRef = firestore.collection('users').doc(userId);
+    try {
+      return await userRef.get(const GetOptions(source: Source.server));
+    } catch (_) {
+      return userRef.get();
     }
   }
 

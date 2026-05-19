@@ -37,12 +37,14 @@ class AuthRepoImpl extends AuthRepo {
     required String name,
     required String email,
     required String password,
+    String? imagePath,
   }) async {
     try {
       final user = await authService.createUserWithEmailAndPassword(
         name: name,
         email: email,
         password: password,
+        imagePath: imagePath,
       );
       return right(UserModel.fromFirebaseUser(user));
     } on CustomException catch (e) {
