@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:test_codex/core/widgets/build_snack_bar.dart';
 import 'package:test_codex/features/auth/presentation/cubits/register/register_cubit.dart';
 import 'package:test_codex/core/widgets/app_background.dart';
 import 'package:test_codex/features/auth/presentation/widgets/register_card.dart';
@@ -73,6 +74,11 @@ class _RegisterViewBodyState extends State<RegisterViewBody> {
     if (!agreedToTerms) {
       autovalidateMode = AutovalidateMode.always;
       setState(() {});
+      buildSnackBar(
+        context,
+        message: 'Please accept the Terms of Service and Privacy Policy.',
+        color: Colors.redAccent,
+      );
       return;
     }
     if (formKey.currentState!.validate()) {
