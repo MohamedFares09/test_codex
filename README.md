@@ -8,7 +8,7 @@
 
 ## Project Overview
 
-**Chat Flow** is a Flutter messaging application for real-time private and group conversations. The app supports authentication, profile management, chat lists, user search, stories, text messages, image/video/voice media, group creation, group details, and message edit/delete actions.
+**Chat Flow** is a Flutter messaging application for real-time private and group conversations. The app supports authentication, profile management, chat lists, user search, stories, text messages, image/video/voice media, contact info pages from private chats, group creation, group details, and message edit/delete actions.
 
 The project targets:
 
@@ -87,7 +87,7 @@ lib/
     message/
       data/              # Private message Firestore service and repo
       domain/            # Message entity, status, type, repo contract
-      presentation/      # Message screen, composer, bubbles, media widgets
+      presentation/      # Message screen, contact info, composer, bubbles, media widgets
     groups/
       data/              # Group Firestore/Storage service and repo
       domain/            # Group entity and repo contract
