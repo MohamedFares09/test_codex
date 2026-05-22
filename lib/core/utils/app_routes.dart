@@ -9,6 +9,7 @@ import 'package:test_codex/features/groups/presentation/views/groups_view.dart';
 import 'package:test_codex/features/groups/presentation/views/new_group_view.dart';
 import 'package:test_codex/features/home/domain/entities/conversation_entity.dart';
 import 'package:test_codex/features/home/presentation/views/home_view.dart';
+import 'package:test_codex/features/message/presentation/views/message_contact_info_view.dart';
 import 'package:test_codex/features/message/presentation/views/message_view.dart';
 import 'package:test_codex/features/settings/presentation/views/settings_view.dart';
 
@@ -36,6 +37,11 @@ Route<dynamic> onGenerateRoute(RouteSettings settings) {
       final conversation = settings.arguments as ConversationEntity;
       return MaterialPageRoute(
         builder: (_) => MessageView(conversation: conversation),
+      );
+    case MessageContactInfoView.route:
+      final conversation = settings.arguments as ConversationEntity;
+      return MaterialPageRoute(
+        builder: (_) => MessageContactInfoView(conversation: conversation),
       );
     case SettingsView.route:
       return MaterialPageRoute(builder: (_) => const SettingsView());
